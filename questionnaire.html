@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UVACO 健康智能問卷</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-50: #f0fdf4;
+      --green-100: #dcfce7;
+      --green-200: #bbf7d0;
+      --green-400: #4ade80;
+      --green-500: #22c55e;
+      --green-600: #16a34a;
+      --green-700: #15803d;
+      --green-800: #166534;
+      --green-900: #14532d;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: var(--gray-800);
+    }
+
+    /* ── Progress Bar ── */
+    .progress-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--green-100);
+      padding: 12px 24px;
+    }
+    .progress-bar-track {
+      height: 4px;
+      background: var(--green-100);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-500), var(--green-600));
+      border-radius: 99px;
+      transition: width 0.5s ease;
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .brand {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green-700);
+      letter-spacing: 0.15em;
+    }
+    .step-label {
+      font-size: 12px;
+      color: var(--gray-400);
+      font-weight: 500;
+    }
+
+    /* ── Main wrapper ── */
+    .slides-wrapper {
+      margin-top: 72px;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      height: calc(100vh - 72px);
+    }
+
+    /* ── Each slide ── */
+    .slide {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      bottom: 0;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 48px 24px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform: translateX(100%);
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s ease;
+      opacity: 0;
+      pointer-events: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide.active {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .slide.exit-left {
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .slide.exit-right {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .slide-inner {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    /* ── Step badge ── */
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-100);
+      color: var(--green-700);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      padding: 6px 14px;
+      border-radius: 99px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .step-dot {
+      width: 6px; height: 6px;
+      background: var(--green-500);
+      border-radius: 50%;
+    }
+
+    .slide-title {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 700;
+      color: var(--green-800);
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .slide-subtitle {
+      font-size: 14px;
+      color: var(--gray-400);
+      margin-bottom: 36px;
+    }
+
+    /* ── Form elements ── */
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+    .form-label.required::after {
+      content: ' *';
+      color: var(--green-600);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      border: 2px solid var(--green-100);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--gray-800);
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 4px rgba(34,197,94,0.12);
+    }
+
+    /* Select arrow */
+    .select-wrap {
+      position: relative;
+    }
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--green-500);
+      pointer-events: none;
+      font-size: 16px;
+    }
+
+    /* ── Radio / Checkbox pills ── */
+    .radio-group, .check-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .radio-group.cols-2 { grid-template-columns: 1fr 1fr; }
+    .radio-group.cols-1 { grid-template-columns: 1fr; }
+
+    .radio-pill, .check-pill {
+      position: relative;
+    }
+    .radio-pill input[type="radio"],
+    .check-pill input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0; height: 0;
+    }
+    .radio-pill label,
+    .check-pill label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: 2px solid var(--green-100);
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-600);
+      background: #fff;
+      transition: all 0.18s;
+      user-select: none;
+    }
+    .radio-pill label::before,
+    .check-pill label::before {
+      content: '';
+      width: 18px; height: 18px;
+      border: 2px solid var(--green-200);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.18s;
+    }
+    .check-pill label::before { border-radius: 5px; }
+    .radio-pill input:checked + label,
+    .check-pill input:checked + label {
+      border-color: var(--green-500);
+      background: var(--green-50);
+      color: var(--green-800);
+    }
+    .radio-pill input:checked + label::before,
+    .check-pill input:checked + label::before {
+      background: var(--green-500);
+      border-color: var(--green-500);
+    }
+    .radio-pill label:hover,
+    .check-pill label:hover {
+      border-color: var(--green-300, #86efac);
+      background: #fafffe;
+    }
+
+    /* ── Grid helpers ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 600px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 400px) {
+      .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      height: 1px;
+      background: var(--green-100);
+      margin: 28px 0;
+    }
+
+    /* ── Warning box ── */
+    .warning-box {
+      background: #fff7ed;
+      border: 1.5px solid #fed7aa;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #9a3412;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .warning-box .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Navigation buttons ── */
+    .nav-footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 16px 24px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--green-100);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+    }
+    .btn-back {
+      padding: 14px 28px;
+      border: 2px solid var(--green-200);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--green-600);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s;
+    }
+    .btn-back:hover { background: var(--green-50); }
+    .btn-back:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-next {
+      flex: 1;
+      max-width: 320px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--green-500), var(--green-600));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      transition: all 0.18s;
+      box-shadow: 0 4px 16px rgba(22,163,74,0.3);
+    }
+    .btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(22,163,74,0.4); }
+    .btn-next:active { transform: translateY(0); }
+    .btn-next:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── Hidden conditional ── */
+    .conditional { transition: all 0.3s; }
+    .conditional.hidden { display: none; }
+
+    /* ── Loading overlay ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(240,253,244,0.92);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 56px; height: 56px;
+      border: 4px solid var(--green-100);
+      border-top-color: var(--green-500);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 16px; font-weight: 600; color: var(--green-700); text-align: center; }
+    .loading-sub { font-size: 13px; color: var(--gray-400); text-align: center; }
+
+    /* ── Error message ── */
+    .error-msg {
+      display: none;
+      background: #fef2f2;
+      border: 1.5px solid #fca5a5;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #dc2626;
+      margin-top: 12px;
+    }
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- Progress Header -->
+<div class="progress-header">
+  <div class="progress-meta">
+    <span class="brand">UVACO</span>
+    <span class="step-label" id="stepLabel">步驟 1 / 5</span>
+  </div>
+  <div class="progress-bar-track">
+    <div class="progress-bar-fill" id="progressFill" style="width:20%"></div>
+  </div>
+</div>
+
+<!-- Slides -->
+<div class="slides-wrapper" id="slidesWrapper">
+
+  <!-- ══ SLIDE 1: 基礎資料 ══ -->
+  <div class="slide active" id="slide-1">
+    <div class="slide-inner">
+      <div class="step-badge"><span class="step-dot"></span>STEP 01</div>
+      <h2 class="slide-title">基礎生活型態與生理結構</h2>
+      <p class="slide-subtitle">讓我們先了解您的基本資料，建立您的健康檔案</p>
+
+      <div class="form-group">
+        <label class="form-label required">姓名 / 您的稱呼</label>
+        <input type="text" name="client_name" id="client_name" placeholder="請輸入您的姓名" autocomplete="off">
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label required">生理性別</label>
+          <div class="radio-group cols-2">
+            <div class="radio-pill">
+              <input type="radio" name="gender" id="gender_m" value="男性">
+              <label for="gender_m">♂ 男性</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="gender" id="gender_f" value="女性" checked>
+              <label for="gender_f">♀ 女性</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">真實年齡（歲）</label>
+          <input type="number" name="age" id="age" placeholder="例如：35" min="1" max="120">
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="form-group">
+          <label class="form-label required">身高（cm）</label>
+          <input type="number" name="height" id="height" placeholder="例如：165">
+        </div>
+        <div class="form-group">
+          <label class="form-label required">體重（kg）</label>
+          <input type="number" name="weight" id="weight" placeholder="例如：58">
+        </div>
+        <div class="form-group">
+          <label class="form-label">有吃過保健品嗎？</label>
+          <div class="radio-group cols-2">
+            <div class="radio-pill">
+              <input type="radio" name="has_taken_supplements" id="supp_y" value="有" checked>
+              <label for="supp_y">有</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="has_taken_supplements" id="supp_n" value="無">
+              <label for="supp_n">無</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">目前服用幾種保健食品？</label>
+          <div class="select-wrap">
+            <select name="supplement_count">
+              <option value="-">請選擇</option>
+              <option value="0種">0種</option>
+              <option value="1-2種">1-2種</option>
+              <option value="3-5種">3-5種</option>
+              <option value="5種以上">5種以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">服用保健食品的頻率？</label>
+          <div class="select-wrap">
+            <select name="supplement_frequency">
+              <option value="-">請選擇</option>
+              <option value="沒有在吃">沒有在吃</option>
+              <option value="想到才吃">想到才吃</option>
+              <option value="會吃但偶爾會忘">偶爾會忘</option>
+              <option value="幾乎每天服用">幾乎每天服用</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 2: 睡眠與疲勞 ══ -->
+  <div class="slide" id="slide-2">
+    <div class="slide-inner">
+      <div class="step-badge"><span class="step-dot"></span>STEP 02</div>
+      <h2 class="slide-title">睡眠品質與疲勞防線</h2>
+      <p class="slide-subtitle">了解您的睡眠狀態與體力耗損情況</p>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">平均每天多久才能睡著？</label>
+          <div class="select-wrap">
+            <select name="time_to_sleep">
+              <option value="-">請選擇</option>
+              <option value="15分鐘內">15分鐘內</option>
+              <option value="16-30分鐘">16-30分鐘</option>
+              <option value="31-60分鐘">31-60分鐘</option>
+              <option value="超過60分鐘">超過60分鐘</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">一週需要幫助入睡的頻率？</label>
+          <div class="select-wrap">
+            <select name="help_sleep_frequency">
+              <option value="-">請選擇</option>
+              <option value="幾乎沒有">幾乎沒有</option>
+              <option value="1-2天">1-2天</option>
+              <option value="3-5天">3-5天</option>
+              <option value="6-7天">6-7天</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">睡眠期間半夜甦醒的頻率？</label>
+          <div class="select-wrap">
+            <select name="wake_up_frequency">
+              <option value="-">請選擇</option>
+              <option value="幾乎沒有">幾乎沒有</option>
+              <option value="每週1-2次">每週1-2次</option>
+              <option value="每週3-5次">每週3-5次</option>
+              <option value="幾乎每天">幾乎每天</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">睡眠是否有多夢的情形？</label>
+          <div class="select-wrap">
+            <select name="dreaming_status">
+              <option value="-">請選擇</option>
+              <option value="幾乎沒有">幾乎沒有</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="幾乎每天">幾乎每天</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">經常加班熬夜或體力需要增強？</label>
+          <div class="select-wrap">
+            <select name="overwork">
+              <option value="-">請選擇</option>
+              <option value="完全沒有">完全沒有</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="幾乎每天">幾乎每天</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">您經常生病感冒嗎？</label>
+          <div class="select-wrap">
+            <select name="sick_frequency">
+              <option value="-">請選擇</option>
+              <option value="幾乎不會">幾乎不會</option>
+              <option value="每年1-2次">每年1-2次</option>
+              <option value="每年3-5次">每年3-5次</option>
+              <option value="每年6次以上">每年6次以上</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 3: 飲食作息 ══ -->
+  <div class="slide" id="slide-3">
+    <div class="slide-inner">
+      <div class="step-badge"><span class="step-dot"></span>STEP 03</div>
+      <h2 class="slide-title">飲食、作息與生活習慣</h2>
+      <p class="slide-subtitle">飲食是健康的根基，讓我們了解您的日常攝取</p>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">您的飲食習慣？</label>
+          <div class="select-wrap">
+            <select name="diet_habit">
+              <option value="-">請選擇</option>
+              <option value="葷食">葷食</option>
+              <option value="蛋奶素">蛋奶素</option>
+              <option value="全素">全素</option>
+              <option value="彈性素食">彈性素食</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">日常飲食來源？</label>
+          <div class="select-wrap">
+            <select name="diet_source">
+              <option value="-">請選擇</option>
+              <option value="幾乎都家裡煮">幾乎都家裡煮</option>
+              <option value="家裡煮為主">家裡煮為主</option>
+              <option value="外食為主">外食為主</option>
+              <option value="幾乎都外送／方便食品">外送 / 方便食品</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <p class="form-label" style="margin-bottom:12px">每日各類食物攝取量</p>
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="form-group">
+          <label class="form-label">蔬菜</label>
+          <div class="select-wrap">
+            <select name="vegetable_intake">
+              <option value="-">-</option>
+              <option value="幾乎不吃">幾乎不吃</option>
+              <option value="1份以下">1份以下</option>
+              <option value="1-2份">1-2份</option>
+              <option value="3份以上">3份以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">水果</label>
+          <div class="select-wrap">
+            <select name="fruit_intake">
+              <option value="-">-</option>
+              <option value="幾乎不吃">幾乎不吃</option>
+              <option value="1份以下">1份以下</option>
+              <option value="1-2份">1-2份</option>
+              <option value="3份以上">3份以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">蛋白質</label>
+          <div class="select-wrap">
+            <select name="protein_intake">
+              <option value="-">-</option>
+              <option value="1份以下">1份以下</option>
+              <option value="2-3份">2-3份</option>
+              <option value="4-5份">4-5份</option>
+              <option value="6份以上">6份以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">每日水分</label>
+          <div class="select-wrap">
+            <select name="water_intake">
+              <option value="-">-</option>
+              <option value="1000ml以下">1000ml以下</option>
+              <option value="1000-1500ml">1000-1500ml</option>
+              <option value="1500-2000ml">1500-2000ml</option>
+              <option value="2000ml以上">2000ml以上</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="form-group">
+          <label class="form-label">每日戶外時長</label>
+          <div class="select-wrap">
+            <select name="outdoor_time">
+              <option value="-">請選擇</option>
+              <option value="少於15分鐘">少於15分鐘</option>
+              <option value="15-30分鐘">15-30分鐘</option>
+              <option value="30-60分鐘">30-60分鐘</option>
+              <option value="超過60分鐘">超過60分鐘</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">每週運動頻率</label>
+          <div class="select-wrap">
+            <select name="exercise_frequency">
+              <option value="-">請選擇</option>
+              <option value="幾乎不運動">幾乎不運動</option>
+              <option value="1-2次">1-2次</option>
+              <option value="3-4次">3-4次</option>
+              <option value="5次以上">5次以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">抽菸與二手菸頻率</label>
+          <div class="select-wrap">
+            <select name="smoking_frequency">
+              <option value="-">請選擇</option>
+              <option value="不抽菸且少接觸二手菸">不抽菸</option>
+              <option value="偶爾接觸二手菸">偶爾接觸二手菸</option>
+              <option value="每天半包以下">每天半包以下</option>
+              <option value="每天半包以上">每天半包以上</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">飲酒頻率</label>
+          <div class="select-wrap">
+            <select name="alcohol_frequency">
+              <option value="-">請選擇</option>
+              <option value="幾乎不喝">幾乎不喝</option>
+              <option value="每月1-3次">每月1-3次</option>
+              <option value="每週1-3次">每週1-3次</option>
+              <option value="每週4次以上">每週4次以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">飲酒隔天會不適嗎？</label>
+          <div class="select-wrap">
+            <select name="alcohol_discomfort">
+              <option value="-">請選擇</option>
+              <option value="從未">從未</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="幾乎每次">幾乎每次</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 4: 消化道與核心困擾 ══ -->
+  <div class="slide" id="slide-4">
+    <div class="slide-inner">
+      <div class="step-badge"><span class="step-dot"></span>STEP 04</div>
+      <h2 class="slide-title">消化道與核心健康困擾</h2>
+      <p class="slide-subtitle">選擇您目前有感的困擾，幫助 AI 精準分析</p>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">排便頻率？</label>
+          <div class="select-wrap">
+            <select name="poop_frequency">
+              <option value="-">請選擇</option>
+              <option value="超過兩天一次">超過兩天一次</option>
+              <option value="每兩天至少一次">每兩天至少一次</option>
+              <option value="每天至少一次">每天至少一次</option>
+              <option value="每天三次以上">每天三次以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">排便型態？</label>
+          <div class="select-wrap">
+            <select name="poop_status">
+              <option value="-">請選擇</option>
+              <option value="以上皆無">正常（以上皆無）</option>
+              <option value="便便較硬不易排出">較硬不易排出</option>
+              <option value="便便較軟成形不完全">較軟成形不完全</option>
+              <option value="便便呈糊狀或水狀">糊狀或水狀</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Female section -->
+      <div class="form-group">
+        <label class="form-label">您目前處於哪個女性階段？</label>
+        <div class="select-wrap">
+          <select name="female_stage" id="femaleStage" onchange="toggleFemaleSection()">
+            <option value="-">請選擇</option>
+            <option value="有生理週期">有生理週期</option>
+            <option value="初經尚未到來">初經尚未到來</option>
+            <option value="已停經">已停經</option>
+            <option value="不適用">不適用（男性選此）</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="femaleSection" class="conditional">
+        <div class="form-group">
+          <label class="form-label">女性核心專屬困擾（可複選）</label>
+          <div class="check-group">
+            <div class="check-pill">
+              <input type="checkbox" name="female_issues" id="fi_1" value="經痛明顯">
+              <label for="fi_1">經痛明顯</label>
+            </div>
+            <div class="check-pill">
+              <input type="checkbox" name="female_issues" id="fi_2" value="經血量大">
+              <label for="fi_2">經血量大</label>
+            </div>
+            <div class="check-pill">
+              <input type="checkbox" name="female_issues" id="fi_3" value="經期皮脂分泌異常">
+              <label for="fi_3">經期皮脂異常</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">私密處乾澀或無彈性困擾？</label>
+          <div class="select-wrap">
+            <select name="private_zone_discomfort">
+              <option value="-">請選擇</option>
+              <option value="完全沒有">完全沒有</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="非常困擾">非常困擾</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">有膠原蛋白增生需求嗎？</label>
+          <div class="select-wrap">
+            <select name="collagen_demand">
+              <option value="-">請選擇</option>
+              <option value="完全沒有">完全沒有</option>
+              <option value="稍微有">稍微有</option>
+              <option value="有需求">有需求</option>
+              <option value="非常需要">非常需要</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">換季抓癢或肌膚困擾？</label>
+          <div class="select-wrap">
+            <select name="skin_scratch">
+              <option value="-">請選擇</option>
+              <option value="完全沒有">完全沒有</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="非常嚴重">非常嚴重</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">吃東西或刷牙時會流血？</label>
+          <div class="select-wrap">
+            <select name="bleeding_status">
+              <option value="-">請選擇</option>
+              <option value="從未">從未</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="幾乎每天">幾乎每天</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">因火氣大造成進食不適？</label>
+          <div class="select-wrap">
+            <select name="heat_discomfort">
+              <option value="-">請選擇</option>
+              <option value="完全沒有">完全沒有</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="非常嚴重">非常嚴重</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">久坐、維持同姿勢、提重物？</label>
+          <div class="select-wrap">
+            <select name="sedentary_status">
+              <option value="-">請選擇</option>
+              <option value="幾乎沒有">幾乎沒有</option>
+              <option value="偶爾">偶爾</option>
+              <option value="經常">經常</option>
+              <option value="幾乎每天">幾乎每天</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">記憶力或聽力衰退困擾？</label>
+          <div class="select-wrap">
+            <select name="memory_status">
+              <option value="-">請選擇</option>
+              <option value="正常">完全正常</option>
+              <option value="記憶力衰退">記憶力明顯衰退</option>
+              <option value="聽力受損衰退">聽力受損或衰退</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">眼睛困擾（可複選）</label>
+        <div class="check-group">
+          <div class="check-pill">
+            <input type="checkbox" name="core_issues" id="eye_1" value="眼睛乾澀酸澀/常用3C">
+            <label for="eye_1">👁 眼睛乾澀酸澀 / 長期使用3C藍光</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 5: 醫療防線 ══ -->
+  <div class="slide" id="slide-5">
+    <div class="slide-inner">
+      <div class="step-badge" style="background:#fef2f2;color:#dc2626"><span class="step-dot" style="background:#dc2626"></span>STEP 05</div>
+      <h2 class="slide-title">醫療防線確認</h2>
+      <p class="slide-subtitle">AI 將自動過濾禁忌成分，請如實填寫以保障您的安全</p>
+
+      <div class="warning-box">
+        <span class="icon">⚠️</span>
+        <span>以下資訊攸關產品安全推薦，若有規律服藥，請務必誠實勾選，系統將自動排除衝突產品。</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="color:#dc2626">曾被醫師診斷或符合以下健康狀況？（可複選）</label>
+        <div class="check-group">
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d1" value="高血壓"><label for="d1">高血壓</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d2" value="高血脂"><label for="d2">高血脂</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d3" value="高血糖／糖尿病"><label for="d3">高血糖／糖尿病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d4" value="心臟疾病"><label for="d4">心臟疾病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d5" value="腎臟疾病"><label for="d5">腎臟疾病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d6" value="肝臟疾病"><label for="d6">肝臟疾病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d7" value="痛風"><label for="d7">痛風</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d8" value="貧血"><label for="d8">貧血</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d9" value="氣喘"><label for="d9">氣喘</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d10" value="子宮疾病"><label for="d10">子宮疾病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d11" value="卵巢疾病"><label for="d11">卵巢疾病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d12" value="乳房疾病"><label for="d12">乳房疾病</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d13" value="紅斑性狼瘡"><label for="d13">紅斑性狼瘡</label></div>
+          <div class="check-pill"><input type="checkbox" name="diseases" id="d14" value="乳糖不耐症"><label for="d14">乳糖不耐症</label></div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <div class="form-group">
+        <label class="form-label" style="color:#dc2626">目前規律服用以下藥物？（可複選）</label>
+        <div class="check-group">
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr1" value="抗凝血藥物"><label for="dr1">抗凝血藥物（阿斯匹靈）</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr2" value="利尿劑"><label for="dr2">利尿劑</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr3" value="降血脂藥物"><label for="dr3">降血脂藥物</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr4" value="抗憂鬱劑"><label for="dr4">抗憂鬱劑</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr5" value="荷爾蒙／激素類藥物"><label for="dr5">荷爾蒙 / 激素類藥物</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr6" value="抗生素"><label for="dr6">抗生素</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr7" value="消炎止痛藥"><label for="dr7">消炎止痛藥</label></div>
+          <div class="check-pill"><input type="checkbox" name="drugs" id="dr8" value="類固醇藥物"><label for="dr8">類固醇藥物</label></div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <div class="form-group">
+        <label class="form-label">半年內醫學報告確認缺乏哪些營養素？（可複選）</label>
+        <div class="check-group">
+          <div class="check-pill"><input type="checkbox" name="deficiencies" id="def1" value="鐵"><label for="def1">鐵</label></div>
+          <div class="check-pill"><input type="checkbox" name="deficiencies" id="def2" value="鈣"><label for="def2">鈣</label></div>
+          <div class="check-pill"><input type="checkbox" name="deficiencies" id="def3" value="維生素B群"><label for="def3">維生素 B 群</label></div>
+          <div class="check-pill"><input type="checkbox" name="deficiencies" id="def4" value="維生素C"><label for="def4">維生素 C</label></div>
+          <div class="check-pill"><input type="checkbox" name="deficiencies" id="def5" value="維生素D"><label for="def5">維生素 D</label></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">有體重控制或雕塑身材的需求嗎？</label>
+        <div class="radio-group cols-2">
+          <div class="radio-pill">
+            <input type="radio" name="weight_control_demand" id="wc_y" value="有">
+            <label for="wc_y">✅ 有需求</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="weight_control_demand" id="wc_n" value="無" checked>
+            <label for="wc_n">目前不需要</label>
+          </div>
+        </div>
+      </div>
+
+      <div id="submitError" class="error-msg"></div>
+    </div>
+  </div>
+
+</div><!-- /slides-wrapper -->
+
+<!-- Navigation Footer -->
+<div class="nav-footer">
+  <button class="btn-back" id="btnBack" onclick="goBack()" disabled>← 上一步</button>
+  <button class="btn-next" id="btnNext" onclick="goNext()">繼續 →</button>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">🧬 AI 正在分析您的健康數據…</div>
+  <div class="loading-sub">通常需要 15-30 秒，請稍候</div>
+</div>
+
+<script>
+  // ── Configuration ──
+  // 替換為您的 Make.com Webhook URL
+  const MAKE_WEBHOOK_URL = 'YOUR_MAKE_WEBHOOK_URL_HERE';
+  // 結果頁 URL（同目錄下的 results.html）
+  const RESULTS_PAGE_URL = 'results.html';
+
+  // ── State ──
+  let currentSlide = 1;
+  const totalSlides = 5;
+
+  // ── Slide navigation ──
+  function goTo(next) {
+    if (next === currentSlide) return;
+    const cur = document.getElementById('slide-' + currentSlide);
+    const nxt = document.getElementById('slide-' + next);
+    const goingForward = next > currentSlide;
+
+    // 1. 立刻把 next slide 定位到螢幕外（關閉 transition 避免閃爍）
+    nxt.style.transition = 'none';
+    nxt.style.transform = goingForward ? 'translateX(100%)' : 'translateX(-100%)';
+    nxt.style.opacity = '0';
+    nxt.style.pointerEvents = 'none';
+    nxt.classList.remove('active', 'exit-left', 'exit-right');
+
+    // 2. 強制瀏覽器重新計算排版（確保起始位置生效）
+    nxt.offsetHeight;
+
+    // 3. 開啟 transition 並把 next slide 滑入中央
+    nxt.style.transition = 'transform 0.45s cubic-bezier(0.4,0,0.2,1), opacity 0.45s ease';
+    nxt.style.transform = 'translateX(0)';
+    nxt.style.opacity = '1';
+    nxt.style.pointerEvents = 'auto';
+
+    // 4. 把 current slide 往對應方向滑出
+    cur.classList.remove('active');
+    cur.classList.add(goingForward ? 'exit-left' : 'exit-right');
+
+    // 5. 動畫結束後清理
+    setTimeout(() => {
+      cur.classList.remove('exit-left', 'exit-right');
+      nxt.classList.add('active');
+      nxt.style.cssText = '';
+    }, 500);
+
+    currentSlide = next;
+    updateUI();
+    // 捲回頂部（捲動 slide 自身）
+    setTimeout(() => { nxt.scrollTop = 0; }, 50);
+  }
+
+  function goNext() {
+    if (currentSlide < totalSlides) {
+      if (!validateSlide(currentSlide)) return;
+      goTo(currentSlide + 1);
+    } else {
+      submitForm();
+    }
+  }
+
+  function goBack() {
+    if (currentSlide > 1) goTo(currentSlide - 1);
+  }
+
+  function updateUI() {
+    const pct = (currentSlide / totalSlides) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('stepLabel').textContent = '步驟 ' + currentSlide + ' / ' + totalSlides;
+    document.getElementById('btnBack').disabled = currentSlide === 1;
+    document.getElementById('btnNext').textContent =
+      currentSlide === totalSlides ? '🔍 生成我的健康報告' : '繼續 →';
+  }
+
+  // ── Validation ──
+  function validateSlide(n) {
+    if (n === 1) {
+      const name = document.getElementById('client_name').value.trim();
+      const age  = document.getElementById('age').value;
+      const h    = document.getElementById('height').value;
+      const w    = document.getElementById('weight').value;
+      if (!name) { alert('請填入您的姓名'); return false; }
+      if (!age)  { alert('請填入您的年齡'); return false; }
+      if (!h)    { alert('請填入身高');     return false; }
+      if (!w)    { alert('請填入體重');     return false; }
+    }
+    return true;
+  }
+
+  // ── Conditional display ──
+  function toggleFemaleSection() {
+    const val = document.getElementById('femaleStage').value;
+    const sec = document.getElementById('femaleSection');
+    if (val === '不適用') {
+      sec.classList.add('hidden');
+    } else {
+      sec.classList.remove('hidden');
+    }
+  }
+
+  // ── Data collection ──
+  function getVal(name) {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  }
+  function getRadio(name) {
+    const el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : '';
+  }
+  function getChecked(name) {
+    return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map(e => e.value);
+  }
+
+  // ── Submit ──
+  async function submitForm() {
+    const ageNum = parseInt(getVal('age')) || 0;
+    const ageRange = ageNum <= 18 ? '18歲以下' :
+                     ageNum <= 30 ? '19-30歲'  :
+                     ageNum <= 50 ? '31-50歲'  : '51歲以上';
+
+    const formData = {
+      client_name:             getVal('client_name'),
+      gender:                  getRadio('gender'),
+      age:                     ageRange,
+      age_raw:                 getVal('age'),
+      height:                  getVal('height'),
+      weight:                  getVal('weight'),
+      has_taken_supplements:   getRadio('has_taken_supplements'),
+      supplement_count:        getVal('supplement_count'),
+      supplement_frequency:    getVal('supplement_frequency'),
+      time_to_sleep:           getVal('time_to_sleep'),
+      help_sleep_frequency:    getVal('help_sleep_frequency'),
+      wake_up_frequency:       getVal('wake_up_frequency'),
+      dreaming_status:         getVal('dreaming_status'),
+      overwork:                getVal('overwork'),
+      sick_frequency:          getVal('sick_frequency'),
+      diet_habit:              getVal('diet_habit'),
+      diet_source:             getVal('diet_source'),
+      vegetable_intake:        getVal('vegetable_intake'),
+      fruit_intake:            getVal('fruit_intake'),
+      protein_intake:          getVal('protein_intake'),
+      water_intake:            getVal('water_intake'),
+      outdoor_time:            getVal('outdoor_time'),
+      exercise_frequency:      getVal('exercise_frequency'),
+      smoking_frequency:       getVal('smoking_frequency'),
+      alcohol_frequency:       getVal('alcohol_frequency'),
+      alcohol_discomfort:      getVal('alcohol_discomfort'),
+      poop_frequency:          getVal('poop_frequency'),
+      poop_status:             getVal('poop_status'),
+      female_stage:            getVal('female_stage'),
+      female_issues:           getChecked('female_issues'),
+      private_zone_discomfort: getVal('private_zone_discomfort'),
+      collagen_demand:         getVal('collagen_demand'),
+      skin_scratch:            getVal('skin_scratch'),
+      bleeding_status:         getVal('bleeding_status'),
+      heat_discomfort:         getVal('heat_discomfort'),
+      sedentary_status:        getVal('sedentary_status'),
+      memory_status:           getVal('memory_status'),
+      core_issues:             getChecked('core_issues'),
+      diseases:                getChecked('diseases'),
+      drugs:                   getChecked('drugs'),
+      deficiencies:            getChecked('deficiencies'),
+      weight_control_demand:   getRadio('weight_control_demand'),
+    };
+
+    document.getElementById('loadingOverlay').classList.add('visible');
+    document.getElementById('btnNext').disabled = true;
+
+    try {
+      const res = await fetch(MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const result = await res.json();
+
+      // Encode result as base64 URL param and redirect
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(result))));
+      window.location.href = RESULTS_PAGE_URL + '?data=' + encodeURIComponent(encoded);
+
+    } catch (err) {
+      document.getElementById('loadingOverlay').classList.remove('visible');
+      document.getElementById('btnNext').disabled = false;
+      const errEl = document.getElementById('submitError');
+      errEl.textContent = '送出失敗，請檢查網路或聯絡客服。錯誤：' + err.message;
+      errEl.classList.add('visible');
+    }
+  }
+
+  // init
+  updateUI();
+</script>
+</body>
+</html>
