@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UVACO 個人化健康報告</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green-50: #f0fdf4; --green-100: #dcfce7; --green-200: #bbf7d0;
+      --green-400: #4ade80; --green-500: #22c55e; --green-600: #16a34a;
+      --green-700: #15803d; --green-800: #166534;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+      --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563;
+      --gray-700: #374151; --gray-800: #1f2937; --gray-900: #111827;
+      --red-50: #fef2f2; --red-500: #ef4444; --red-600: #dc2626;
+      --amber-50: #fffbeb; --amber-500: #f59e0b;
+      --blue-50: #eff6ff; --blue-500: #3b82f6; --blue-600: #2563eb;
+    }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+    }
+
+    /* ── Hero Header ── */
+    .hero {
+      background: linear-gradient(135deg, var(--green-800) 0%, var(--green-600) 60%, var(--green-500) 100%);
+      color: #fff;
+      padding: 48px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 300px; height: 300px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -40px;
+      width: 240px; height: 240px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+    .hero-brand { font-size: 13px; font-weight: 700; letter-spacing: 0.25em; opacity: 0.8; margin-bottom: 12px; }
+    .hero-name { font-size: clamp(28px, 5vw, 42px); font-weight: 900; margin-bottom: 6px; }
+    .hero-sub { font-size: 14px; opacity: 0.75; margin-bottom: 32px; }
+    .hero-score-ring {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 24px 40px;
+      backdrop-filter: blur(8px);
+    }
+    .hero-score-num { font-size: 56px; font-weight: 900; line-height: 1; }
+    .hero-score-label { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+    .hero-level-badge {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 8px 24px;
+      border-radius: 99px;
+      font-size: 15px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.3);
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 16px 80px;
+      margin-top: -40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Section card ── */
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      padding: 28px 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 20px;
+    }
+    .card-title .icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--green-100);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green-600);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    /* ── A. Radar Chart ── */
+    .radar-wrap {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    /* ── B. Health Scores Grid ── */
+    .scores-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+    }
+    .score-item {
+      text-align: center;
+      padding: 16px 8px;
+      border-radius: 14px;
+      background: var(--gray-50);
+      border: 1.5px solid var(--gray-100);
+    }
+    .score-item .s-num {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .score-item .s-label {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-top: 4px;
+    }
+    .score-bar {
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: 99px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 1s ease;
+    }
+
+    /* ── C. BMI Gauge ── */
+    .bmi-gauge-wrap {
+      position: relative;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    .bmi-center-label {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    .bmi-num { font-size: 36px; font-weight: 900; color: var(--gray-800); line-height: 1; }
+    .bmi-category { font-size: 14px; font-weight: 600; margin-top: 4px; }
+    .bmi-scale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 8px;
+    }
+
+    /* ── D. Risk Analysis ── */
+    .risk-list { display: flex; flex-direction: column; gap: 12px; }
+    .risk-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1.5px solid;
+    }
+    .risk-item.high { background: var(--red-50); border-color: #fca5a5; }
+    .risk-item.medium { background: var(--amber-50); border-color: #fcd34d; }
+    .risk-item.low { background: var(--blue-50); border-color: #bfdbfe; }
+    .risk-badge {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
+    }
+    .risk-item.high .risk-badge { background: #fca5a5; color: #dc2626; }
+    .risk-item.medium .risk-badge { background: #fcd34d; color: #92400e; }
+    .risk-item.low .risk-badge { background: #bfdbfe; color: #1e40af; }
+    .risk-title { font-size: 14px; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
+    .risk-desc { font-size: 13px; color: var(--gray-500); line-height: 1.6; }
+
+    /* ── E. Products ── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .product-card {
+      border: 1.5px solid var(--green-100);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .product-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(22,163,74,0.12); }
+    .product-img {
+      width: 100%;
+      height: 180px;
+      object-fit: contain;
+      background: var(--green-50);
+      padding: 16px;
+    }
+    .product-img-placeholder {
+      width: 100%;
+      height: 180px;
+      background: var(--green-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+    .product-body { padding: 16px; }
+    .product-priority {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--green-100);
+      color: var(--green-700);
+      margin-bottom: 8px;
+    }
+    .product-name { font-size: 15px; font-weight: 700; color: var(--gray-800); margin-bottom: 6px; }
+    .product-reason { font-size: 12px; color: var(--gray-500); line-height: 1.6; margin-bottom: 12px; }
+    .product-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--green-100);
+    }
+    .product-price { font-size: 18px; font-weight: 900; color: var(--green-700); }
+    .product-dosage { font-size: 11px; color: var(--gray-400); text-align: right; max-width: 60%; }
+
+    /* ── F. Monthly Cost ── */
+    .cost-breakdown { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--gray-50);
+      font-size: 14px;
+    }
+    .cost-row .name { color: var(--gray-600); }
+    .cost-row .amount { font-weight: 700; color: var(--gray-800); }
+    .cost-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 14px;
+      border-radius: 14px;
+      background: var(--green-600);
+      color: #fff;
+    }
+    .cost-total .label { font-size: 15px; font-weight: 600; }
+    .cost-total .total-num { font-size: 28px; font-weight: 900; }
+
+    /* ── G. 90-Day Plan ── */
+    .plan-phases { display: flex; flex-direction: column; gap: 0; }
+    .phase-item {
+      display: flex;
+      gap: 0;
+    }
+    .phase-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 40px;
+      flex-shrink: 0;
+    }
+    .phase-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--green-500);
+      border: 3px solid var(--green-100);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .phase-connector {
+      width: 2px;
+      flex: 1;
+      background: var(--green-200);
+      min-height: 40px;
+      margin-top: 4px;
+    }
+    .phase-content {
+      flex: 1;
+      padding-bottom: 28px;
+      padding-left: 8px;
+    }
+    .phase-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--green-700);
+      background: var(--green-100);
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 8px;
+    }
+    .phase-title { font-size: 16px; font-weight: 700; color: var(--gray-800); margin-bottom: 6px; }
+    .phase-products {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+    }
+    .phase-product-tag {
+      font-size: 12px;
+      background: #fff;
+      border: 1.5px solid var(--green-200);
+      color: var(--green-700);
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-weight: 500;
+    }
+    .phase-lifestyle {
+      font-size: 13px;
+      color: var(--gray-500);
+      line-height: 1.6;
+      padding: 10px 14px;
+      background: var(--gray-50);
+      border-radius: 10px;
+      border-left: 3px solid var(--green-400);
+    }
+
+    /* ── Summary text ── */
+    .health-summary {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--gray-600);
+      background: var(--green-50);
+      border-radius: 14px;
+      padding: 18px;
+      border-left: 4px solid var(--green-500);
+    }
+
+    /* ── Loading state ── */
+    .loading-state {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: var(--green-50);
+    }
+    .spinner {
+      width: 56px; height: 56px;
+      border: 4px solid var(--green-100);
+      border-top-color: var(--green-500);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error state ── */
+    .error-state {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+    .btn-retry {
+      padding: 12px 28px;
+      background: var(--green-600);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    @media (max-width: 600px) {
+      .scores-grid { grid-template-columns: repeat(3, 1fr); }
+      .products-grid { grid-template-columns: 1fr; }
+      .hero { padding: 36px 16px 64px; }
+    }
+
+    /* Print */
+    @media print {
+      .hero { background: var(--green-700) !important; -webkit-print-color-adjust: exact; }
+      .card { break-inside: avoid; }
+    }
+
+    /* ── Plan Tabs ── */
+    .plan-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .plan-tab {
+      flex: 1; min-width: 100px; padding: 10px 14px;
+      border: 2px solid var(--green-200); border-radius: 12px;
+      background: #fff; color: var(--gray-600);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: all 0.18s; text-align: center;
+    }
+    .plan-tab.active { border-color: var(--green-500); background: var(--green-50); color: var(--green-800); }
+    .plan-tab:hover:not(.active) { border-color: #86efac; }
+    .plan-panel { display: none; }
+    .plan-panel.active { display: block; }
+    .plan-panel-desc {
+      font-size: 12px; color: var(--gray-500); margin-bottom: 14px;
+      padding: 8px 12px; background: var(--green-50); border-radius: 8px;
+    }
+    /* ── Product category tag ── */
+    .product-category {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 99px;
+      background: var(--green-100); color: var(--green-700); margin-bottom: 6px;
+    }
+    /* ── Ingredient / Benefit ── */
+    .product-detail-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--green-100); }
+    .product-detail-label { font-size: 11px; font-weight: 700; color: var(--green-700); margin-bottom: 3px; }
+    .product-detail-text { font-size: 12px; color: var(--gray-600); line-height: 1.55; }
+    /* ── Collapsible price ── */
+    .price-toggle { margin-top: 12px; }
+    .price-toggle summary {
+      font-size: 12px; font-weight: 600; color: var(--green-600);
+      cursor: pointer; padding: 6px 0; list-style: none;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .price-toggle summary::-webkit-details-marker { display: none; }
+    .price-toggle summary::before { content: '▶'; font-size: 8px; transition: transform 0.2s; }
+    .price-toggle[open] summary::before { transform: rotate(90deg); }
+    .price-toggle-content {
+      padding: 10px 12px; background: var(--gray-50);
+      border-radius: 8px; margin-top: 6px; border: 1px solid var(--green-100);
+    }
+    .price-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
+    .price-row:not(:last-child) { border-bottom: 1px solid var(--gray-100); }
+    .price-row .p-label { color: var(--gray-500); }
+    .price-row .p-val { font-weight: 700; color: var(--gray-800); }
+    /* ── Plan cost bar ── */
+    .plan-cost-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, var(--green-800), var(--green-600));
+      color: #fff; border-radius: 12px; margin-top: 16px;
+    }
+    .plan-cost-bar .pcb-monthly { font-size: 12px; font-weight: 500; opacity: 0.85; }
+    .plan-cost-bar .pcb-monthly strong { display: block; font-size: 20px; font-weight: 800; margin-top: 2px; }
+    .plan-cost-bar .pcb-daily { text-align: right; }
+    .plan-cost-bar .pcb-daily-label { font-size: 11px; opacity: 0.75; }
+    .plan-cost-bar .pcb-daily-num { font-size: 22px; font-weight: 900; }
+    @media (max-width: 480px) {
+      .plan-tab { font-size: 12px; padding: 8px 10px; }
+      .plan-cost-bar .pcb-monthly strong { font-size: 17px; }
+      .plan-cost-bar .pcb-daily-num { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading-state">
+    <div class="spinner"></div>
+    <p style="font-size:16px;font-weight:600;color:var(--green-700)">載入健康報告中…</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// 產品圖片對應表
+// 格式：'產品名稱': 'Google Drive 圖片直連 URL'
+// 在 setup-guide.md 中說明如何填寫
+// ═══════════════════════════════════════════════
+const PRODUCT_IMAGES = {
+  '原味餐包 / 葡眾餐包':         'https://lh3.googleusercontent.com/d/14yOULU_ccthMN-bTRzDpwpnuNxr_Ho2J',
+  '葡眾餐包':                    'https://lh3.googleusercontent.com/d/14yOULU_ccthMN-bTRzDpwpnuNxr_Ho2J',
+  '康爾喜 / 康爾喜(N) 乳酸菌顆粒': 'https://lh3.googleusercontent.com/d/1jAxDDCihPBCEcqCEkiRrWWUl6DFgJRC5',
+  '康爾喜':                      'https://lh3.googleusercontent.com/d/1jAxDDCihPBCEcqCEkiRrWWUl6DFgJRC5',
+  '康爾喜(N)':                   'https://lh3.googleusercontent.com/d/1jAxDDCihPBCEcqCEkiRrWWUl6DFgJRC5',
+  '康悅兒益生菌':                'https://lh3.googleusercontent.com/d/1jx9VcyUnMxLuPg2FMuUoFQos22gYXG9R',
+  '康悅兒':                      'https://lh3.googleusercontent.com/d/1jx9VcyUnMxLuPg2FMuUoFQos22gYXG9R',
+  '康爾暢益生菌':                'https://lh3.googleusercontent.com/d/1lYkGjsen7DMl7lt8ARDZIwNbf4bkpviT',
+  '康爾暢':                      'https://lh3.googleusercontent.com/d/1lYkGjsen7DMl7lt8ARDZIwNbf4bkpviT',
+  '康爾動':                      'https://lh3.googleusercontent.com/d/1SOvOCDb-kkxzjYk5y9DVTJ-sHwwHbyi8',
+  '葡眾樂優':                    'https://lh3.googleusercontent.com/d/1tqd0YuhHpGAzaGL2yX2nFCRUcJd1XFhL',
+  '銀燦餐包':                    'https://lh3.googleusercontent.com/d/1tByauACyasQUFjMKyI3U6L9PoFuch1WX',
+  '欣悅康沖泡飲':                'https://lh3.googleusercontent.com/d/1-1fEmXxfLuogPLifpcXOXipJTTMZALrO',
+  '欣悅康':                      'https://lh3.googleusercontent.com/d/1-1fEmXxfLuogPLifpcXOXipJTTMZALrO',
+  '艾逸膠囊 / 愛益膠囊':         'https://lh3.googleusercontent.com/d/18dS-8LjqMc9jEGGp-JwTUPwnQwOluutL',
+  '艾逸':                        'https://lh3.googleusercontent.com/d/18dS-8LjqMc9jEGGp-JwTUPwnQwOluutL',
+  '靚妍飲 (含玻尿酸)':           'https://lh3.googleusercontent.com/d/1gM_V1XpPtVUkhQzCMnDq6sJ7DJSMZUl9',
+  '葡眾靚妍飲':                  'https://lh3.googleusercontent.com/d/1gM_V1XpPtVUkhQzCMnDq6sJ7DJSMZUl9',
+  '995 生技營養品':              'https://lh3.googleusercontent.com/d/1ZE8806i-Vx-l6lqkxXARE4ZqbEIq0Hjk',
+  '995生技營養品':               'https://lh3.googleusercontent.com/d/1ZE8806i-Vx-l6lqkxXARE4ZqbEIq0Hjk',
+  '扶百生膠囊':                  'https://lh3.googleusercontent.com/d/1y1-kagPELB7-uwG2OgYZv_lbHv7ciIky',
+  '扶百生':                      'https://lh3.googleusercontent.com/d/1y1-kagPELB7-uwG2OgYZv_lbHv7ciIky',
+  '迪康沖泡飲':                  'https://lh3.googleusercontent.com/d/1cNDexbf8guLc9BsO6PAXW0vLb0GmVSug',
+  '迪康':                        'https://lh3.googleusercontent.com/d/1cNDexbf8guLc9BsO6PAXW0vLb0GmVSug',
+  '力盛沖泡飲':                  'https://lh3.googleusercontent.com/d/1u6wyabEnZ6RsAd1N59Pf_FdrV25Wqlcz',
+  '力盛':                        'https://lh3.googleusercontent.com/d/1u6wyabEnZ6RsAd1N59Pf_FdrV25Wqlcz',
+  '禾玥膠囊':                    'https://lh3.googleusercontent.com/d/1DbfLJzoJuRImGgCWhoMtvxD3lY_v4tQa',
+  '禾玥':                        'https://lh3.googleusercontent.com/d/1DbfLJzoJuRImGgCWhoMtvxD3lY_v4tQa',
+  '貝納 Q10 膠囊':               'https://lh3.googleusercontent.com/d/1MJaw33giGrFtNFKEw8o-hZhQJV5g6-z0',
+  '貝納Q10':                     'https://lh3.googleusercontent.com/d/1MJaw33giGrFtNFKEw8o-hZhQJV5g6-z0',
+  '醣利佳膠囊':                  'https://lh3.googleusercontent.com/d/1692M4_UFWJ0QXzKow7dCdDbqwy1BSLc0',
+  '醣利佳':                      'https://lh3.googleusercontent.com/d/1692M4_UFWJ0QXzKow7dCdDbqwy1BSLc0',
+  '清采媞膠囊 (原清彩仙)':        'https://lh3.googleusercontent.com/d/1Bc8esC5r_N0C-siDhTll7vRbPwgTbx_J',
+  '青采孅':                      'https://lh3.googleusercontent.com/d/1Bc8esC5r_N0C-siDhTll7vRbPwgTbx_J',
+  '清明亮膠囊':                  'https://lh3.googleusercontent.com/d/1rVjHHtz2SWqJsDieyMM55LbtFveMGzr7',
+  '清明亮':                      'https://lh3.googleusercontent.com/d/1rVjHHtz2SWqJsDieyMM55LbtFveMGzr7',
+  '樟芝益 (生技液體)':            'https://lh3.googleusercontent.com/d/1xQ1dgOj4OQzwv7-_iyx_No6NL-1wKBnC',
+  '樟芝益':                      'https://lh3.googleusercontent.com/d/1xQ1dgOj4OQzwv7-_iyx_No6NL-1wKBnC',
+  '樟芝菌絲體滴粒 (原樟芝地)':    'https://lh3.googleusercontent.com/d/1xQ1dgOj4OQzwv7-_iyx_No6NL-1wKBnC',
+  '寧康福膠囊':                  'https://lh3.googleusercontent.com/d/1MvTdrCrxF1zVIOpI2Rx_BB-ijAfK3k54',
+  '寧康福':                      'https://lh3.googleusercontent.com/d/1MvTdrCrxF1zVIOpI2Rx_BB-ijAfK3k54',
+  '活逸康':                      'https://lh3.googleusercontent.com/d/1C6dHaNXsztX8Yif7Brra9c_wkJ-lCUq7',
+  '貝力耐':                      'https://lh3.googleusercontent.com/d/1nRgpE25VQ4YDFayEjDy7xLfE4xtpybtc',
+  '衛傑膠囊':                    'https://lh3.googleusercontent.com/d/1AbrUl7HV5Zf6BNG3xapOLisnYMWH4W0C',
+  '衛傑':                        'https://lh3.googleusercontent.com/d/1AbrUl7HV5Zf6BNG3xapOLisnYMWH4W0C',
+  '百克斯膠囊':                  'https://lh3.googleusercontent.com/d/1aCQceBCNBBWevV51rpyLVyPb2FY3uwBs',
+  '百克斯':                      'https://lh3.googleusercontent.com/d/1aCQceBCNBBWevV51rpyLVyPb2FY3uwBs',
+  '康貝寧':                      'https://lh3.googleusercontent.com/d/1rheY9ZtGBtbNrTsueI03i8vk8tby-UA0',
+  '暢且利膠囊 + 福百生膠囊 (熟男黃金套組)': 'https://lh3.googleusercontent.com/d/1Zg_DD9xM557y-5tox4crH_tdhhIvXd84',
+  '暢且利':                      'https://lh3.googleusercontent.com/d/1Zg_DD9xM557y-5tox4crH_tdhhIvXd84',
+  '葡眾 360 計劃 大保養套組':     'https://lh3.googleusercontent.com/d/1lREqdZopPbA5krC2WtZk-YUG8clcHucA',
+  '葡眾360計劃':                  'https://lh3.googleusercontent.com/d/1lREqdZopPbA5krC2WtZk-YUG8clcHucA',
+};
+
+function getProductImage(name) {
+  if (PRODUCT_IMAGES[name]) return PRODUCT_IMAGES[name];
+  for (const key of Object.keys(PRODUCT_IMAGES)) {
+    if (PRODUCT_IMAGES[key] && (name.includes(key) || key.includes(name))) {
+      return PRODUCT_IMAGES[key];
+    }
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════
+// 產品靜態資料庫（成分 + 效用 + 注意事項）
+// ═══════════════════════════════════════════════
+const PRODUCT_DB = {
+  '康爾喜(N)': {
+    category: '益生菌',
+    ingredients: '雷特氏B菌、LGG菌、胚芽乳酸菌、龍根菌等3種優質益生菌；木瓜酵素、鳳梨酵素；生技後生元',
+    benefits: '增加抗體、抗病毒、提升免疫力、修補細胞、抑制發炎、抑制腸道壞菌、改善過敏體質、降低膽固醇、預防食物中毒、穩定腦神經；輔助腸胃消化與營養吸收；創造益生菌最佳存活環境',
+    warnings: ''
+  },
+  '康爾暢': {
+    category: '益生菌',
+    ingredients: 'GKM3胚芽乳酸菌、GKK26乳雙歧桿菌、GKL93短乳桿菌等13種菌株（保證活菌數1200億）；全菌體顆粒劑型',
+    benefits: '「老屋翻新」：創造菌種多元性、提升腸道菌相豐富度、強化腸道細胞屏障、修復急性發炎損傷、改善嚴重便秘；顆粒狀易吞嚥不嗆咳，適合長輩與小孩',
+    warnings: ''
+  },
+  '康爾動': {
+    category: '益生菌',
+    ingredients: '台灣桑黃菌絲體；GKEX運動機能乳酸菌、GKK24運動機能乳雙歧桿菌；GKB7洛酸菌',
+    benefits: '調整血壓、降血脂、降血糖及抗腫瘤、增強體力與免疫力；幫助運動族群續航體力、減少乳酸堆積；改善先天體質弱或心肺功能不佳者的代謝',
+    warnings: '嬰幼兒、孕婦不宜'
+  },
+  '葡眾樂優': {
+    category: '益生菌',
+    ingredients: 'Gk05胚芽乳酸菌、LGG菌、Gk33（F菌）、GKSW嗜酸乳桿菌；五味子、生薑萃取物；芝麻素萃取物',
+    benefits: '抑止脂肪肝形成、降低腸道毒素、保護肝臟、平衡胃腸道功能、治療異位性皮膚炎；抗氧化、調節免疫力及保護肝臟；加速肝臟代謝、降血壓血糖、安定神經、幫助睡眠',
+    warnings: ''
+  },
+  '康悅兒': {
+    category: '益生菌',
+    ingredients: 'GKJOY、GKF3陽光益生菌；甜橙萃取物',
+    benefits: '經實驗證實可增加腦中200%的血清素與多巴胺；改善負面情緒、降低憂鬱感受、緩解學業與工作壓力；增加抗壓性、精力與專注力，協助正向迎接挑戰',
+    warnings: ''
+  },
+  '葡眾餐包': {
+    category: '餐包打底',
+    ingredients: '大豆蛋白；燕麥粉；刺五加（西伯利亞人參）；靈芝菌絲體；亞麻仁種子粉',
+    benefits: '補充必需胺基酸，提供完整植物性蛋白質，修復細胞的基礎；補充維生素B群、E及膳食纖維，控制血糖、降低膽固醇與改善便秘；抗衰老、抗疲勞、益氣安神、提升免疫力；健脾安神、活血化瘀；提供優質Omega-3脂肪酸',
+    warnings: ''
+  },
+  '銀燦餐包': {
+    category: '餐包打底',
+    ingredients: '柿子萃取物；巴西蘑菇菌絲體；黑芝麻粉；啤酒酵母',
+    benefits: '消除口臭、腋下臭、體味及老人味；激活免疫細胞（巨噬細胞、T細胞），抗腫瘤與增強抗病毒能力；滋補神經骨髓、預防貧血、防止頭髮脫落並維持黑亮；含維生素B群，加速新陳代謝與能量利用',
+    warnings: ''
+  },
+  '995生技營養品': {
+    category: '生技營養',
+    ingredients: '大豆、小麥胚芽發酵物（20種游離態胺基酸、數百種短鏈胜肽）；Lentix萃取液（香菇多醣）；核酸、卵磷脂、去醣基異黃酮',
+    benefits: '不需轉換直接吸收，快速恢復體力、修補傷口、骨折及受損細胞，改善放化療後白血球不足；抗癌，奈米化後由粘膜吸收極佳；預防老化、增進神經連接、保護心臟與骨骼',
+    warnings: ''
+  },
+  '樟芝益': {
+    category: '生技營養',
+    ingredients: '樟芝菌絲體（富含三萜類與多醣體）；姬松茸、舞茸、雲芝、桑黃',
+    benefits: '護肝、抗發炎、降三高、抗腫瘤；增強體質、減輕放化療痛苦、抗病毒及預防肺炎；嚴重腫痛時可外敷內服',
+    warnings: '紅斑性狼瘡患者禁用'
+  },
+  '扶百生': {
+    category: '男性調理',
+    ingredients: '馬卡萃取物；管花肉蓯蓉、黃精、杜仲葉萃取；冬蟲夏草菌絲體、生地、透納葉',
+    benefits: '抗疲勞、增強體力、調節男女性內分泌系統、改善貧血；補腎、益精血、強筋骨、降高血壓；清熱涼血、調節神經系統、促進荷爾蒙分泌，維持男性全天候精氣神',
+    warnings: '服用抗凝血藥物者禁用；嬰幼兒、孕婦禁用'
+  },
+  '暢且利': {
+    category: '男性調理',
+    ingredients: '南瓜籽、亞麻籽、沙棘果萃取物；蛹蟲草菌絲體、鋅酵母、硒酵母、牛蒡',
+    benefits: '專為男性設計，保養攝護腺、舒緩頻尿、抑制膀胱過動；溫腎陽、增強生殖能力、防止細胞癌變、防止老化',
+    warnings: '含蛹蟲草，真菌過敏者不建議使用'
+  },
+  '欣悅康': {
+    category: '女性調理',
+    ingredients: '糙薏仁、黑糖、老薑粉、天貝發酵物、鳳梨酵素；小米、山藥、乳酸菌、大麥仁',
+    benefits: '排除子宮污血、促進子宮收縮、改善經期不適、暖子宮並提升受孕機會；滋潤調節內分泌、補元氣、改善食慾不振；備孕期建議搭配艾逸使用',
+    warnings: ''
+  },
+  '艾逸': {
+    category: '女性調理',
+    ingredients: '珍珠粉（純素版改為余甘子）；亞麻仁種子粉（富含Omega-3）；當歸、陳皮、桑椹、靈芝、黨參、黃耆',
+    benefits: '鈣質補充、幫助入睡、美白美顏；調節荷爾蒙（雌激素、黃體素）、改善經期與更年期不適；活血止痛、滋養內分泌八大腺體、改善甲狀腺指數',
+    warnings: ''
+  },
+  '迪康': {
+    category: '代謝循環',
+    ingredients: '山楂、陳皮；丹參、藏紅花；人參、麥門冬、熟地、枸杞',
+    benefits: '助消化、去油解膩、改善脹氣；活血化瘀、擴張血管、溶解血栓、預防中風與心肌梗塞；補虛、抗腫瘤、調節代謝、明目；建議搭配力盛由腎臟代謝毒素',
+    warnings: '服用抗凝血藥物者禁用'
+  },
+  '力盛': {
+    category: '代謝循環',
+    ingredients: 'GKR1專利益生菌；蘆筍；草決明、黃耆、桑椹、羅漢果',
+    benefits: '抑制關鍵酶以降低血清尿酸；素食者體內排毒頭號清道夫，富含纖維、葉酸、鉀，增強免疫力；滋養腎臟、預防頻尿、排毒及緩解眼部乾澀、飛蚊症；改善水腫型肥胖',
+    warnings: '腎臟疾病（洗腎/重度）患者禁用'
+  },
+  '衛傑': {
+    category: '功能調理',
+    ingredients: '猴頭菇；山藥、茯苓；LGG菌、加氏乳酸桿菌',
+    benefits: '修復胃粘膜、對抗幽門螺旋桿菌；滋強免疫力、安定神經、助消化、利尿；平衡消化道吸收、抑制幽門桿菌；所有產品搭配衛傑功效加倍',
+    warnings: ''
+  },
+  '百克斯': {
+    category: '功能調理',
+    ingredients: '冬蟲夏草菌絲體、黨參；黑棗、菊花、薄荷萃取',
+    benefits: '補益肺腎、穩定中樞神經、補元氣；潤喉、養血安神、改善鼻過敏與慢性支氣管炎、排出尼古丁毒素；搭配益生菌改善長期鼻過敏效果更佳',
+    warnings: ''
+  },
+  '清明亮': {
+    category: '功能調理',
+    ingredients: '金盞花萃取（葉黃素、玉米黃素）；綠花椰菜苗萃取（蘿蔔硫素）；山桑子、枸杞、葡萄籽、熟地',
+    benefits: '100%游離型葉黃素，黃金比例吸收，抵抗3C藍光、保護黃斑部；強化微血管彈性、緩解眼壓與酸痛；增加視網膜血液循環、抗氧化、消除眼睛疲勞；需搭配餐包或995協助運送營養',
+    warnings: ''
+  },
+  '貝力耐': {
+    category: '功能調理',
+    ingredients: '葡萄糖胺、軟骨素；膠原蛋白（Arthred，美國專利）；酪蛋白水解物（CPP）、納豆發酵物（K2）、維生素D2、碳酸鈣',
+    benefits: '潤滑、緩衝關節、促進軟骨修復；直接修補軟骨與結締組織；促進鈣質吸收並精確導入骨骼；亦可搭配餐包幫助孩童長高',
+    warnings: ''
+  },
+  '康貝寧': {
+    category: '功能調理',
+    ingredients: '蜜環菌（天麻共生菌）；GABA、L-色胺酸；五味子、桔梗、生地、人參、當歸、茯苓、紅棗',
+    benefits: '安定神經、鎮靜、治頭眩頭痛，提升睡眠品質；大腦化學傳遞物質與血清素前趨物，幫助放鬆與安眠；補心安神、調節神經衰弱；輔助戒除安眠藥依賴',
+    warnings: ''
+  },
+  '貝納Q10': {
+    category: '功能調理',
+    ingredients: '油橄欖果渣萃取物（羥基酪醇）；納豆萃取物（含納豆激酶）；紅麴粉；輔酵素Q10',
+    benefits: '極強抗氧化活性（比維他命C高50倍），保護受損細胞、增加新陳代謝；強力血栓溶解，預防腦梗塞；抑制膽固醇合成與LDL氧化；活化心肌細胞、維持皮膚與胸部彈性',
+    warnings: '服用抗凝血藥物者禁用'
+  },
+  '活逸康': {
+    category: '功能調理',
+    ingredients: '猴頭菇菌絲體（Erinacine A，獨門專利）；丹參、薑黃、米萃取（γ-Oryzanol）',
+    benefits: '刺激神經生長因子（NGF）生成，修復神經連結、改善失智、中風損傷、失聰及肌無力；清除自由基、活化細胞、安定神經傳導',
+    warnings: ''
+  },
+  '寧康福': {
+    category: '功能調理',
+    ingredients: '桑黃菌絲體、蛹蟲草、墨角藻；初乳粉、綠茶萃取物',
+    benefits: '強效抗發炎，調節血壓、血脂、血糖，抑制癌細胞；增強免疫系統、抗病毒、修補損害細胞、延緩老化；肌肉撕裂傷或嚴重紅腫時可大量補充',
+    warnings: ''
+  },
+  '禾玥': {
+    category: '代謝循環',
+    ingredients: '紅葡萄葉萃取物（富含花青素、槲皮素）；山楂、紅棗萃取物；山竹果抽出物',
+    benefits: '保護血管彈性、抑制膠原蛋白與彈力蛋白分解、改善靜脈曲張；增強心肌收縮力、降血壓、預防動脈粥狀硬化；強效抗氧化、調整血管保養、抗發炎',
+    warnings: ''
+  },
+  '醣利佳': {
+    category: '體重管理',
+    ingredients: '白腎豆；紅景天、苦瓜胜肽、桑黃；GKD2乳桿菌、GKM3胚芽乳酸菌',
+    benefits: '抑制澱粉分解，阻斷澱粉吸收；阻斷糖分吸收、促進新陳代謝、降低糖類熱量負擔；改善葡萄糖耐受不良；餐中或餐後立即服用效果最好',
+    warnings: ''
+  },
+  '青采孅': {
+    category: '體重管理',
+    ingredients: '幾丁聚醣；藤黃果（HCA）；GKS6益生菌、綠茶萃取物',
+    benefits: '包覆飲食油脂並排除，阻斷油脂吸收；抑制脂肪合成、抑制食慾；提升新陳代謝、降低脂肪肝形成；務必大量喝水以利代謝',
+    warnings: ''
+  },
+  '葡眾靚妍飲': {
+    category: '美妍系列',
+    ingredients: '穀胱甘肽；N-乙醯基-D-葡萄糖胺（玻尿酸前趨物）；洛神花萃取、蔓越莓濃縮汁；米胚芽萃取物',
+    benefits: '強大抗氧化力，預防肌膚老化、抑制黑色素生成、美白祛斑；增加皮膚彈性、潤滑關節；預防泌尿道感染與牙周病、維持心血管健康；舒緩交感神經、調節血壓（欣悅康升級版）',
+    warnings: ''
+  },
+  '葡眾360計劃': {
+    category: '全方位套組',
+    ingredients: '原味餐包（補鐵鈣）、康爾喜乳酸菌顆粒（顧腸道）、迪康（清血管）；全身調理膠囊：995凍乾粉（君）、靈芝（臣）、蛹蟲草/冬蟲夏草（佐）、紅麴（使）',
+    benefits: '全方位「清、補、調」平衡方案；全方位細胞營養，一次解決全身代謝與防衛力；忙碌現代人首選套組',
+    warnings: ''
+  },
+};
+
+function getProductInfo(name) {
+  if (PRODUCT_DB[name]) return PRODUCT_DB[name];
+  for (const key of Object.keys(PRODUCT_DB)) {
+    if (name.includes(key) || key.includes(name)) return PRODUCT_DB[key];
+  }
+  return null;
+}
+
+// ── Plan tab switcher ──
+function showPlan(key, btn) {
+  document.querySelectorAll('.plan-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.plan-panel').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('panel-' + key);
+  if (panel) panel.classList.add('active');
+}
+
+// ── Score color ──
+function scoreColor(n) {
+  if (n >= 80) return '#16a34a';
+  if (n >= 60) return '#22c55e';
+  if (n >= 40) return '#f59e0b';
+  return '#ef4444';
+}
+
+// ── BMI color ──
+function bmiColor(cat) {
+  const map = {
+    '過輕': '#3b82f6', '正常': '#16a34a', '過重': '#f59e0b',
+    '輕度肥胖': '#f97316', '中度肥胖': '#ef4444', '重度肥胖': '#dc2626'
+  };
+  return map[cat] || '#6b7280';
+}
+
+// ── Render ──
+function render(data) {
+  const {
+    client_name = '親愛的朋友',
+    health_scores = {},
+    bmi = 0,
+    bmi_category = '正常',
+    overall_score = 0,
+    overall_level = '',
+    health_summary = '',
+    risk_analysis = [],
+    plans = null,
+    action_plan_90 = []
+  } = data;
+
+  // 相容舊格式（recommended_products）→ 自動轉換成 plans 結構
+  let resolvedPlans = plans;
+  if (!resolvedPlans || !resolvedPlans.plan_a) {
+    const prods = data.recommended_products || [];
+    const total = data.total_monthly_cost || prods.reduce((s,p) => s + (p.monthly_cost||p.price||0), 0);
+    resolvedPlans = {
+      plan_a: { label:'完整方案', products: prods, total_monthly_cost: total },
+      plan_b: { label:'中階方案', products: prods.slice(0, Math.max(1, Math.ceil(prods.length*0.6))), total_monthly_cost: Math.round(total*0.6) },
+      plan_c: { label:'陽春方案', products: prods.slice(0,1), total_monthly_cost: prods[0]?.monthly_cost||0 }
+    };
+  }
+
+  const scoreLabels = Object.keys(health_scores);
+  const scoreValues = Object.values(health_scores);
+
+  document.getElementById('app').innerHTML = `
+    <!-- ── HERO ── -->
+    <div class="hero">
+      <p class="hero-brand">UVACO · 個人化健康智能報告</p>
+      <h1 class="hero-name">${client_name} 的健康分析</h1>
+      <p class="hero-sub">由 AI 根據您的問卷數據生成 · 僅供保健參考</p>
+      <div class="hero-score-ring">
+        <span class="hero-score-num">${overall_score}</span>
+        <span class="hero-score-label">綜合健康指數 / 100</span>
+      </div>
+      <div class="hero-level-badge">${overall_level}</div>
+    </div>
+
+    <div class="container">
+
+      <!-- ── A. Radar Chart ── -->
+      <div class="card">
+        <div class="section-label">A · 健康雷達圖</div>
+        <div class="card-title"><div class="icon">🎯</div>六大健康維度評估</div>
+        <div class="radar-wrap">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+
+      <!-- ── B. Score bars ── -->
+      <div class="card">
+        <div class="section-label">B · 綜合健康水平</div>
+        <div class="card-title"><div class="icon">📊</div>各維度詳細得分</div>
+        <div class="scores-grid" id="scoresGrid"></div>
+        ${health_summary ? `<div class="health-summary" style="margin-top:20px">${health_summary}</div>` : ''}
+      </div>
+
+      <!-- ── C. BMI ── -->
+      <div class="card">
+        <div class="section-label">C · BMI 儀錶板</div>
+        <div class="card-title"><div class="icon">⚖️</div>身體質量指數</div>
+        <div class="bmi-gauge-wrap">
+          <canvas id="bmiChart" height="200"></canvas>
+          <div class="bmi-center-label">
+            <div class="bmi-num" style="color:${bmiColor(bmi_category)}">${bmi}</div>
+            <div class="bmi-category" style="color:${bmiColor(bmi_category)}">${bmi_category}</div>
+          </div>
+        </div>
+        <div class="bmi-scale">
+          <span>過輕 &lt;18.5</span>
+          <span>正常 18.5-24</span>
+          <span>過重 24-27</span>
+          <span>肥胖 &gt;27</span>
+        </div>
+      </div>
+
+      <!-- ── D. Risk Analysis ── -->
+      <div class="card">
+        <div class="section-label">D · 健康風險分析</div>
+        <div class="card-title"><div class="icon">⚠️</div>可能的健康風險</div>
+        <div class="risk-list" id="riskList"></div>
+      </div>
+
+      <!-- ── E. Products + Cost (三階方案) ── -->
+      <div class="card">
+        <div class="section-label">E · 個人化三階保健方案</div>
+        <div class="card-title"><div class="icon">🌿</div>AI 精選適合您的保健品</div>
+        <div class="plan-tabs">
+          <button class="plan-tab active" onclick="showPlan('a',this)">🏆 完整方案</button>
+          <button class="plan-tab" onclick="showPlan('b',this)">⚡ 中階方案</button>
+          <button class="plan-tab" onclick="showPlan('c',this)">🌱 陽春方案</button>
+        </div>
+        <div class="plan-panel active" id="panel-a">
+          <p class="plan-panel-desc">全方位調理，涵蓋所有健康維度，追求最佳保健效果</p>
+          <div class="products-grid" id="productsGrid-a"></div>
+          <div class="plan-cost-bar" id="costBar-a"></div>
+        </div>
+        <div class="plan-panel" id="panel-b">
+          <p class="plan-panel-desc">針對您最需要改善的2-3個健康維度，平衡效果與預算</p>
+          <div class="products-grid" id="productsGrid-b"></div>
+          <div class="plan-cost-bar" id="costBar-b"></div>
+        </div>
+        <div class="plan-panel" id="panel-c">
+          <p class="plan-panel-desc">最基礎打底，先建立健康根基，適合預算有限或剛開始保健</p>
+          <div class="products-grid" id="productsGrid-c"></div>
+          <div class="plan-cost-bar" id="costBar-c"></div>
+        </div>
+        <p style="font-size:11px;color:var(--gray-400);margin-top:16px;text-align:center">* 金額依實際盒數計算，建議依個人需求與預算選擇適合方案</p>
+      </div>
+
+      <!-- ── G. 90-Day Plan ── -->
+      <div class="card">
+        <div class="section-label">G · 90 天行動計劃</div>
+        <div class="card-title"><div class="icon">🗓</div>分階段健康提升策略</div>
+        <div class="plan-phases" id="planPhases"></div>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align:center;padding:24px 0;color:var(--gray-400);font-size:12px">
+        <p>本報告由 UVACO 健康智能系統生成，僅供保健參考，不代替醫療診斷。</p>
+        <p style="margin-top:4px">如有重大健康疑慮，請諮詢專業醫師。</p>
+        <button onclick="window.print()" style="margin-top:16px;padding:10px 24px;border:1.5px solid var(--green-200);border-radius:10px;background:#fff;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">🖨 列印 / 儲存 PDF</button>
+        <button onclick="window.location.href='questionnaire.html'" style="margin-top:16px;margin-left:12px;padding:10px 24px;border:none;border-radius:10px;background:var(--green-600);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">重新填寫問卷</button>
+      </div>
+
+    </div>
+  `;
+
+  // ── Render score bars ──
+  const grid = document.getElementById('scoresGrid');
+  scoreLabels.forEach((label, i) => {
+    const val = scoreValues[i];
+    const color = scoreColor(val);
+    const div = document.createElement('div');
+    div.className = 'score-item';
+    div.innerHTML = `
+      <div class="s-num" style="color:${color}">${val}</div>
+      <div class="s-label">${label}</div>
+      <div class="score-bar"><div class="score-bar-fill" style="width:${val}%;background:${color}"></div></div>
+    `;
+    grid.appendChild(div);
+  });
+
+  // ── Radar Chart ──
+  const radarCtx = document.getElementById('radarChart').getContext('2d');
+  new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: scoreLabels,
+      datasets: [{
+        label: '健康指數',
+        data: scoreValues,
+        backgroundColor: 'rgba(34,197,94,0.15)',
+        borderColor: '#16a34a',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#16a34a',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { stepSize: 20, font: { size: 10 }, color: '#9ca3af' },
+          grid: { color: '#e5e7eb' },
+          pointLabels: { font: { size: 12, weight: '600' }, color: '#374151' }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // ── BMI Gauge (Doughnut) ──
+  const bmiVal = parseFloat(bmi) || 22;
+  const bmiPct = Math.min(Math.max((bmiVal - 10) / (45 - 10), 0), 1);
+  const angle = bmiPct * 180; // degrees in semicircle
+  const bmiCtx = document.getElementById('bmiChart').getContext('2d');
+  new Chart(bmiCtx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [bmiPct * 100, 100 - bmiPct * 100],
+        backgroundColor: [bmiColor(bmi_category), '#f3f4f6'],
+        borderWidth: 0,
+        circumference: 180,
+        rotation: 270,
+      }]
+    },
+    options: {
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+
+  // ── Risk list ──
+  const riskList = document.getElementById('riskList');
+  if (risk_analysis.length === 0) {
+    riskList.innerHTML = '<p style="color:var(--green-600);font-weight:600;text-align:center;padding:20px">🎉 目前未偵測到明顯健康風險，繼續保持！</p>';
+  } else {
+    risk_analysis.forEach(r => {
+      const sevClass = r.severity === '高' ? 'high' : r.severity === '中' ? 'medium' : 'low';
+      const div = document.createElement('div');
+      div.className = `risk-item ${sevClass}`;
+      div.innerHTML = `
+        <div>
+          <span class="risk-badge">${r.severity}風險</span>
+          <div class="risk-title">${r.risk}</div>
+          <div class="risk-desc">${r.description}</div>
+        </div>
+      `;
+      riskList.appendChild(div);
+    });
+  }
+
+  // ── Products (三階方案) ──
+  function renderPlanPanel(planKey, planData) {
+    const grid = document.getElementById(`productsGrid-${planKey}`);
+    const costBar = document.getElementById(`costBar-${planKey}`);
+    if (!grid || !planData) return;
+    const products = planData.products || [];
+    grid.innerHTML = '';
+    products.forEach((p, i) => {
+      const imgUrl = getProductImage(p.product_name);
+      const imgHtml = imgUrl
+        ? `<img class="product-img" src="${imgUrl}" alt="${p.product_name}" onerror="this.style.display='none'">`
+        : `<div class="product-img-placeholder">🌿</div>`;
+      const info = getProductInfo(p.product_name);
+      const monthCost = p.monthly_cost || p.price || 0;
+      const dailyCost = Math.round(monthCost / 30);
+      const infoHtml = info ? `
+        <div class="product-detail-section">
+          <div class="product-detail-label">成分</div>
+          <div class="product-detail-text">${info.ingredients}</div>
+        </div>
+        <div class="product-detail-section">
+          <div class="product-detail-label">效益</div>
+          <div class="product-detail-text">${info.benefits}</div>
+        </div>
+        ${info.warnings ? `<div class="product-detail-section"><div class="product-detail-text" style="color:#f59e0b">⚠️ ${info.warnings}</div></div>` : ''}
+      ` : '';
+      const div = document.createElement('div');
+      div.className = 'product-card';
+      div.innerHTML = `
+        ${imgHtml}
+        <div class="product-body">
+          <span class="product-priority">優先 #${i + 1}</span>
+          ${p.category ? `<span class="product-category">${p.category}</span>` : ''}
+          <div class="product-name">${p.product_name}</div>
+          <div class="product-reason">${p.reason || ''}</div>
+          ${infoHtml}
+          ${p.dosage ? `<div style="font-size:12px;color:var(--gray-500);margin-top:8px">📋 ${p.dosage}</div>` : ''}
+          <details class="price-toggle">
+            <summary>查看費用</summary>
+            <div class="price-toggle-content">
+              <div class="price-row"><span class="p-label">每月費用</span><span class="p-val">NT$ ${monthCost.toLocaleString()}</span></div>
+              <div class="price-row"><span class="p-label">平均每日</span><span class="p-val">NT$ ${dailyCost}</span></div>
+            </div>
+          </details>
+        </div>
+      `;
+      grid.appendChild(div);
+    });
+    // Cost bar
+    const total = planData.total_monthly_cost || products.reduce((s,p) => s + (p.monthly_cost||p.price||0), 0);
+    const dailyTotal = Math.round(total / 30);
+    costBar.innerHTML = `
+      <div class="pcb-monthly">每月預算<strong>NT$ ${total.toLocaleString()}</strong></div>
+      <div class="pcb-daily">
+        <div class="pcb-daily-label">每日平均</div>
+        <div class="pcb-daily-num">NT$ ${dailyTotal}</div>
+      </div>
+    `;
+  }
+
+  ['a', 'b', 'c'].forEach(key => renderPlanPanel(key, resolvedPlans[`plan_${key}`]));
+
+  // ── 90-Day Plan ──
+  const planEl = document.getElementById('planPhases');
+  action_plan_90.forEach((phase, i) => {
+    const isLast = i === action_plan_90.length - 1;
+    const div = document.createElement('div');
+    div.className = 'phase-item';
+    const products = Array.isArray(phase.products) ? phase.products : [];
+    div.innerHTML = `
+      <div class="phase-line">
+        <div class="phase-dot"></div>
+        ${!isLast ? '<div class="phase-connector"></div>' : ''}
+      </div>
+      <div class="phase-content">
+        <span class="phase-tag">${phase.phase || '第 ' + (i+1) + ' 階段'}</span>
+        <div class="phase-title">${phase.focus || ''}</div>
+        <div class="phase-products">
+          ${products.map(pr => `<span class="phase-product-tag">${pr}</span>`).join('')}
+        </div>
+        <div class="phase-lifestyle">💡 ${phase.lifestyle || ''}</div>
+      </div>
+    `;
+    planEl.appendChild(div);
+  });
+}
+
+// ── Parse URL data ──
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('data');
+
+  if (!encoded) {
+    // Demo mode – show sample data for testing
+    const demo = {
+      client_name: '示範用戶',
+      health_scores: {
+        '睡眠品質': 45, '飲食營養': 68, '運動體能': 35,
+        '消化腸道': 72, '免疫防禦': 58, '壓力調適': 42
+      },
+      bmi: 24.2,
+      bmi_category: '過重',
+      overall_score: 53,
+      overall_level: '⚠️ 需要加強',
+      health_summary: '您的運動量與睡眠品質是目前最需要優先改善的兩個面向。建議從建立規律作息與腸道調理開始，循序漸進提升整體健康水平。',
+      risk_analysis: [
+        { risk: '慢性睡眠不足', severity: '高', description: '長期入睡困難且半夜容易醒來，可能影響荷爾蒙分泌與免疫功能。' },
+        { risk: '運動量不足', severity: '中', description: '每週運動少於2次，代謝率偏低，體重管理與心血管健康需特別注意。' },
+        { risk: '腸道菌相失衡', severity: '低', description: '排便型態顯示腸道環境需要調理，建議補充益生菌。' }
+      ],
+      plans: {
+        plan_a: {
+          label: '完整方案',
+          total_monthly_cost: 5184,
+          products: [
+            { product_name: '康貝寧', category: '神經/睡眠', reason: '入睡時間長且頻繁半夜醒來，需要神經調節與深層助眠支援。', monthly_cost: 1880, dosage: '每天2粒，睡前30分鐘', priority: 1 },
+            { product_name: '康爾喜(N)', category: '益生菌', reason: '腸道菌相調理與免疫基礎建立，針對您的排便狀況優化。', monthly_cost: 1960, dosage: '每天1條，飯後服用', priority: 2 },
+            { product_name: '葡眾餐包', category: '打底', reason: '補充基礎微量元素，為全身自癒力打好地基。', monthly_cost: 1344, dosage: '每天1包，加入飲食中', priority: 3 },
+          ]
+        },
+        plan_b: {
+          label: '中階方案',
+          total_monthly_cost: 3840,
+          products: [
+            { product_name: '康爾喜(N)', category: '益生菌', reason: '腸道菌相調理與免疫基礎建立，最核心的打底產品。', monthly_cost: 1960, dosage: '每天1條，飯後服用', priority: 1 },
+            { product_name: '康貝寧', category: '神經/睡眠', reason: '針對您的睡眠問題，優先改善整體睡眠品質。', monthly_cost: 1880, dosage: '每天2粒，睡前30分鐘', priority: 2 },
+          ]
+        },
+        plan_c: {
+          label: '陽春方案',
+          total_monthly_cost: 1960,
+          products: [
+            { product_name: '康爾喜(N)', category: '益生菌', reason: '先從腸道健康出發，建立最根本的免疫與消化基礎。', monthly_cost: 1960, dosage: '每天1條，飯後服用', priority: 1 },
+          ]
+        }
+      },
+      action_plan_90: [
+        { phase: '第1-4週：打地基', focus: '建立腸道基礎環境與睡眠改善', products: ['原味餐包', '康爾喜', '康貝寧'], lifestyle: '確保每天飲水2000ml以上，建立固定就寢時間（晚上11點前）' },
+        { phase: '第5-8週：調節期', focus: '深化睡眠品質與免疫強化', products: ['康貝寧', '康悅兒益生菌'], lifestyle: '下午2點後避免咖啡因，每週增加1-2次有氧運動' },
+        { phase: '第9-13週：鞏固期', focus: '全面鞏固成果，體質根本改造', products: ['所有推薦產品'], lifestyle: '維持良好習慣，每3個月重新評估健康狀態' }
+      ]
+    };
+    render(demo);
+    return;
+  }
+
+  try {
+    const json = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(encoded)))));
+    render(json);
+  } catch (e) {
+    document.getElementById('app').innerHTML = `
+      <div class="error-state">
+        <p style="font-size:40px">😢</p>
+        <h2 style="font-size:20px;font-weight:700">報告載入失敗</h2>
+        <p style="color:var(--gray-500)">資料解析錯誤，請返回問卷重新填寫。</p>
+        <button class="btn-retry" onclick="window.location.href='questionnaire.html'">← 返回問卷</button>
+      </div>
+    `;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
